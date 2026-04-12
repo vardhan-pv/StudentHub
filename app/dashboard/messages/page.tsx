@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Send, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-export default function MessagesPage() {
+function MessagesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
+  
+  // ... (rest of the component logic)
   const [user, setUser] = useState<any>(null);
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConversation, setActiveConversation] = useState<any>(null);
@@ -100,7 +101,6 @@ export default function MessagesPage() {
 
   return (
     <div style={{ background: '#0d0d14', minHeight: '100vh', color: '#fff', display: 'flex', flexDirection: 'column' }}>
-
       {/* NAV */}
       <nav style={{ background: 'rgba(13,13,20,0.95)', borderBottom: '1px solid rgba(255,255,255,0.07)', backdropFilter: 'blur(20px)', flexShrink: 0 }}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -255,5 +255,17 @@ export default function MessagesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense fallback={
+       <div style={{ background: '#0d0d14', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+        <p style={{ color: 'rgba(255,255,255,0.4)' }}>Loading...</p>
+      </div>
+    }>
+      <MessagesContent />
+    </Suspense>
   );
 }
