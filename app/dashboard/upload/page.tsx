@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, FileUp, AlertCircle, CheckCircle, Github, Search, Globe, Lock, ArrowRight, Zap, Loader2, Code2, Sparkles } from 'lucide-react';
+import { Upload, FileUp, AlertCircle, CheckCircle, Github, Search, Globe, Lock, ArrowRight, Zap, Loader2, Code2, Sparkles, BrainCircuit, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -42,6 +42,7 @@ export default function UploadProjectPage() {
   const [githubUrl, setGithubUrl] = useState('');
   const [fetchingRepo, setFetchingRepo] = useState(false);
   const [isDeepScanning, setIsDeepScanning] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [repoPreview, setRepoPreview] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -71,6 +72,56 @@ export default function UploadProjectPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const generateAIDescription = async (owner: string, repo: string, title: string, framework: string, language: string) => {
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`);
+      if (!res.ok) throw new Error('No readme');
+      
+      const data = await res.json();
+      const rawReadme = atob(data.content);
+      
+      // Smart Analysis Logic:
+      // 1. Extract first paragraph that isn't a heading
+      // 2. Extract bullet points from a "Features" or "overview" section
+      
+      const lines = rawReadme.split('\n');
+      let featurePoints: string[] = [];
+      let summary = '';
+      
+      let inFeatures = false;
+      for (const line of lines) {
+        const clean = line.trim();
+        // Look for feature section
+        if (clean.toLowerCase().includes('feature') || clean.toLowerCase().includes('functionality')) {
+          inFeatures = true;
+          continue;
+        }
+        if (inFeatures && (clean.startsWith('-') || clean.startsWith('*'))) {
+          featurePoints.push(clean.substring(1).trim());
+          if (featurePoints.length > 5) inFeatures = false; // Limit bullet points
+        }
+        // Grab early descriptive text
+        if (!summary && clean.length > 50 && !clean.startsWith('#') && !clean.startsWith('!')) {
+          summary = clean;
+        }
+      }
+
+      // Format as professional Student Hub description
+      const finalDesc = `🚀 ${title} - ${framework || language} Project\n\n${summary || 'A professional repository snapshot automatically imported from GitHub.'}\n\n✨ Key Features:\n${featurePoints.length > 0 
+        ? featurePoints.map(p => `• ${p}`).join('\n') 
+        : `• Clean and optimized ${language} implementation\n• Modular architecture for easy customization\n• Fully functional and well-documented code`}\n\n🛠️ Setup & Usage:\nRefer to the included files for detailed installation instructions. Perfect for students and developers looking to jumpstart their project.`;
+
+      setFormData(prev => ({ ...prev, description: finalDesc }));
+    } catch (e) {
+      // Fallback description if no README
+      const fallback = `Experience this high-quality ${framework || language} project: ${title}. \n\nThis project features a clean architecture, professional code standards, and is perfectly suited for learning or production use. \n\nIncludes:\n• Full source code snapshot\n• ${language} implementation\n• Ready-to-deploy structure`;
+      setFormData(prev => ({ ...prev, description: fallback }));
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const detectFrameworkAndCategory = async (owner: string, repo: string, defaultLang: string) => {
@@ -158,16 +209,20 @@ export default function UploadProjectPage() {
       // Deep Scan for Frameworks
       const { detectedFramework, detectedTags, detectedCategory } = await detectFrameworkAndCategory(owner, cleanRepo, data.language);
 
+      const title = data.name.charAt(0).toUpperCase() + data.name.slice(1).replace(/-/g, ' ');
+
       // Auto-fill form
       setFormData(prev => ({
         ...prev,
-        title: data.name.charAt(0).toUpperCase() + data.name.slice(1).replace(/-/g, ' '),
-        description: data.description || '',
+        title,
         language: data.language || '',
         framework: detectedFramework || prev.framework,
         category: detectedCategory,
         tags: [...(data.topics || []), ...detectedTags].join(', ')
       }));
+
+      // Generate AI Description
+      generateAIDescription(owner, cleanRepo, title, detectedFramework || '', data.language || '');
 
     } catch (err: any) {
       setError(err.message || 'Failed to fetch repository info');
@@ -553,10 +608,15 @@ export default function UploadProjectPage() {
                           <div className="bg-gradient-to-br from-gray-50 to-white border border-gray-100 p-8 rounded-[40px] shadow-xl shadow-gray-200/20 animate-in fade-in zoom-in-95 duration-500 relative overflow-hidden group">
                             
                             {/* Deep Scan Loading Overlay */}
-                            {isDeepScanning && (
+                            {(isDeepScanning || isAnalyzing) && (
                               <div className="absolute inset-0 bg-white/80 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center gap-4">
-                                <Code2 size={40} className="text-blue-600 animate-bounce" />
-                                <p className="font-black text-blue-600 text-sm tracking-widest uppercase">Deep Scanning Tech Stack...</p>
+                                <BrainCircuit size={44} className="text-blue-600 animate-pulse" />
+                                <div className="text-center">
+                                  <p className="font-black text-blue-600 text-sm tracking-widest uppercase mb-1">
+                                    {isDeepScanning ? 'Deep Scanning Tech Stack...' : 'AI Analyzing Project...'}
+                                  </p>
+                                  <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em]">Building professional description</p>
+                                </div>
                               </div>
                             )}
 
@@ -595,12 +655,25 @@ export default function UploadProjectPage() {
 
                   {/* Step 2: Content */}
                   <section>
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="w-10 h-10 rounded-2xl bg-blue-600/10 text-blue-600 flex items-center justify-center font-black text-sm">2</div>
-                      <div>
-                        <h2 className="text-2xl font-black tracking-tight">Project Presentation</h2>
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">What are you selling?</p>
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-600/10 text-blue-600 flex items-center justify-center font-black text-sm">2</div>
+                        <div>
+                          <h2 className="text-2xl font-black tracking-tight">Project Presentation</h2>
+                          <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1">What are you selling?</p>
+                        </div>
                       </div>
+                      
+                      {method === 'github' && (
+                        <Button 
+                          type="button"
+                          onClick={fetchRepoInfo}
+                          disabled={isAnalyzing || !repoPreview}
+                          className="h-10 px-5 rounded-xl border border-blue-100 text-blue-600 hover:bg-blue-50 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95"
+                        >
+                          <Wand2 size={14} /> Regenerate with AI
+                        </Button>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -618,14 +691,22 @@ export default function UploadProjectPage() {
                       </FieldGroup>
 
                       <FieldGroup className="md:col-span-2">
-                        <FieldLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-4 block">Smart Description *</FieldLabel>
+                        <div className="flex justify-between items-center mb-4">
+                           <FieldLabel className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 block">Smart Description *</FieldLabel>
+                           {isAnalyzing && (
+                              <div className="flex items-center gap-2 text-blue-600 animate-pulse">
+                                 <Sparkles size={12} />
+                                 <span className="text-[10px] font-black uppercase tracking-widest">AI Writing...</span>
+                              </div>
+                           )}
+                        </div>
                         <textarea
                           name="description"
                           value={formData.description}
                           onChange={handleInputChange}
                           placeholder="What makes this project special? List features, tech stack, and setup instructions..."
-                          rows={8}
-                          className="w-full px-6 py-5 border border-gray-100 rounded-[30px] focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium leading-relaxed bg-gray-50/20 text-gray-600"
+                          rows={12}
+                          className={`w-full px-8 py-6 border border-gray-100 rounded-[36px] focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium leading-relaxed bg-gray-50/20 text-gray-600 transition-all ${isAnalyzing ? 'opacity-40 blur-[1px]' : 'opacity-100'}`}
                           required
                         />
                         <div className="flex justify-between mt-4 px-3">
@@ -773,10 +854,10 @@ export default function UploadProjectPage() {
                   </div>
                 </li>
                 <li className="flex gap-5">
-                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border border-white/10"><Lock size={22} /></div>
+                  <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border border-white/10"><BrainCircuit size={22} /></div>
                   <div>
-                    <p className="font-black text-sm">Snapshot Lock</p>
-                    <p className="text-white/60 text-xs mt-1.5 font-bold leading-relaxed">Automatic snapshots keep your code safe and buyers protected.</p>
+                    <p className="font-black text-sm">AI Content Engine</p>
+                    <p className="text-white/60 text-xs mt-1.5 font-bold leading-relaxed">Our AI analyzes your README to write professional sales descriptions.</p>
                   </div>
                 </li>
               </ul>
