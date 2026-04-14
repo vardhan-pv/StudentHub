@@ -153,7 +153,7 @@ export default function MarketplacePage() {
             <>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24, marginBottom: 48 }}>
                 {projects.map((project: any) => (
-                  <Link key={project._id} href={`/project/${project._id}`} style={{ textDecoration: 'none' }}>
+                  <Link key={project.id} href={`/project/${project.id}`} style={{ textDecoration: 'none' }}>
                     <div style={{
                       background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
                       borderRadius: 18, padding: 24, cursor: 'pointer', height: '100%', boxSizing: 'border-box',
@@ -166,8 +166,8 @@ export default function MarketplacePage() {
                       <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginBottom: 14, lineHeight: 1.6, flex: 1 }}>{project.description?.slice(0, 90)}...</p>
                       <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 14 }}>by <span
                         style={{ color: 'rgba(255,255,255,0.65)', fontWeight: 600, cursor: 'pointer' }}
-                        onClick={(e) => { e.preventDefault(); router.push(`/profile/${project.sellerUsername}`); }}>
-                        {project.sellerUsername}
+                        onClick={(e) => { e.preventDefault(); router.push(`/profile/${project.seller_username}`); }}>
+                        {project.seller_username}
                       </span></p>
                       {project.metadata?.tags?.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>

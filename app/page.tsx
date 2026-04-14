@@ -224,7 +224,7 @@ export default function Home() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 24 }}>
               {projects.map((project: any) => (
-                <Link key={project._id} href={`/project/${project._id}`} style={{ textDecoration: 'none' }}>
+                <Link key={project.id} href={`/project/${project.id}`} style={{ textDecoration: 'none' }}>
                   <div style={{
                     background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 20, padding: 24, cursor: 'pointer', transition: 'all 0.3s ease',
@@ -248,7 +248,7 @@ export default function Home() {
                     </div>
                     <h3 style={{ color: '#fff', fontSize: 17, fontWeight: 700, marginBottom: 8, lineHeight: 1.4 }}>{project.title}</h3>
                     <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginBottom: 16, lineHeight: 1.6 }}>{project.description?.slice(0, 80)}...</p>
-                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 16 }}>by <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{project.sellerUsername}</span></div>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, marginBottom: 16 }}>by <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>{project.seller_username}</span></div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 16 }}>
                       <div style={{ display: 'flex', gap: 12 }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#fbbf24', fontSize: 13 }}>

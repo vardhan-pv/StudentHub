@@ -76,7 +76,7 @@ function MessagesContent() {
     const token = localStorage.getItem('auth_token');
     const content = newMessage.trim();
     setNewMessage('');
-    const optimisticMsg = { _id: Date.now().toString(), senderId: user.userId, senderUsername: user.username, content, createdAt: new Date().toISOString() };
+    const optimisticMsg = { id: Date.now().toString(), senderId: user.userId, senderUsername: user.username, content, createdAt: new Date().toISOString() };
     setMessages(prev => [...prev, optimisticMsg]);
     try {
       const response = await fetch('/api/messages', {
@@ -199,7 +199,7 @@ function MessagesContent() {
                   {messages.map((msg, index) => {
                     const isMe = msg.senderId === user.userId;
                     return (
-                      <div key={msg._id || index} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                      <div key={msg.id || index} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                         <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)', marginBottom: 6, paddingLeft: 4, paddingRight: 4 }}>
                           {msg.senderUsername || user.username} · {isMe ? activeConversation.myRole : activeConversation.otherRole}
                         </span>

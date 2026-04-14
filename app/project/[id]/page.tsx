@@ -59,7 +59,7 @@ export default function ProjectPage() {
     }
 
     // Redirect to conversation page instead of Razorpay
-    router.push(`/dashboard/messages?projectId=${projectId}&sellerId=${project.sellerId}&sellerUsername=${project.sellerUsername}`);
+    router.push(`/dashboard/messages?projectId=${projectId}&sellerId=${project.seller_id}&sellerUsername=${project.seller_username}`);
   };
 
   if (loading) {
@@ -112,14 +112,14 @@ export default function ProjectPage() {
               <h1 className="text-4xl font-bold mb-4">{project.title}</h1>
 
               <div className="flex items-center gap-6 mb-6 pb-6 border-b">
-                <Link href={`/seller/${project.sellerId}`} className="flex items-center gap-3">
+                <Link href={`/seller/${project.seller_id}`} className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
                     <span className="font-bold text-blue-600">
-                      {project.sellerUsername.charAt(0).toUpperCase()}
+                      {project.seller_username.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div>
-                    <p className="font-semibold hover:underline">{project.sellerUsername}</p>
+                    <p className="font-semibold hover:underline">{project.seller_username}</p>
                     <p className="text-sm text-gray-600">Seller</p>
                   </div>
                 </Link>
@@ -145,11 +145,11 @@ export default function ProjectPage() {
                 <p className="text-gray-700 whitespace-pre-wrap">{project.description}</p>
               </div>
 
-              {project.metadata?.tags && project.metadata.tags.length > 0 && (
+              {project.tags && project.tags.length > 0 && (
                 <div className="mb-8">
                   <h3 className="text-lg font-semibold mb-4">Tags</h3>
                   <div className="flex flex-wrap gap-2">
-                    {project.metadata.tags.map((tag: string) => (
+                    {project.tags.map((tag: string) => (
                       <span key={tag} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-full text-sm">
                         {tag}
                       </span>
@@ -159,25 +159,25 @@ export default function ProjectPage() {
               )}
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {project.metadata?.language && (
+                {project.language && (
                   <div>
                     <p className="text-sm text-gray-600">Language</p>
-                    <p className="font-semibold">{project.metadata.language}</p>
+                    <p className="font-semibold">{project.language}</p>
                   </div>
                 )}
-                {project.metadata?.framework && (
+                {project.framework && (
                   <div>
                     <p className="text-sm text-gray-600">Framework</p>
-                    <p className="font-semibold">{project.metadata.framework}</p>
+                    <p className="font-semibold">{project.framework}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-sm text-gray-600">File Size</p>
-                  <p className="font-semibold">{(project.fileSize / (1024 * 1024)).toFixed(2)} MB</p>
+                  <p className="font-semibold">{(project.file_size / (1024 * 1024)).toFixed(2)} MB</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Posted</p>
-                  <p className="font-semibold">{new Date(project.createdAt).toLocaleDateString()}</p>
+                  <p className="font-semibold">{new Date(project.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
             </Card>
