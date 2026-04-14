@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const tokenData = verifyToken(token!);
+    const tokenData = await verifyToken(token!);
     if (!tokenData || typeof tokenData === 'string') {
       return NextResponse.json(
         errorResponse('Invalid token'),

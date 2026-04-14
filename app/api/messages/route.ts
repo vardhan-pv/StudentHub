@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const { valid, token } = validateAuthHeader(authHeader || '');
     if (!valid) return NextResponse.json(errorResponse('Unauthorized'), { status: 401 });
 
-    const tokenData = verifyToken(token!);
+    const tokenData = await verifyToken(token!);
     if (!tokenData || typeof tokenData === 'string') {
       return NextResponse.json(errorResponse('Invalid token'), { status: 401 });
     }
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     const { valid, token } = validateAuthHeader(authHeader || '');
     if (!valid) return NextResponse.json(errorResponse('Unauthorized'), { status: 401 });
 
-    const tokenData = verifyToken(token!);
+    const tokenData = await verifyToken(token!);
     if (!tokenData || typeof tokenData === 'string') {
       return NextResponse.json(errorResponse('Invalid token'), { status: 401 });
     }
