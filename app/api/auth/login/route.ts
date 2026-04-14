@@ -82,10 +82,10 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch (error) {
-    console.error('Login error:', error);
+  } catch (error: any) {
+    console.error('Login error details:', error);
     return NextResponse.json(
-      errorResponse('Internal server error'),
+      errorResponse(`Internal server error: ${error.message || 'Unknown error'}`),
       { status: 500 }
     );
   }

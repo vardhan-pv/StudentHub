@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/ui/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Star, Download, ShoppingCart, ArrowLeft, ShieldCheck, Clock, Zap, Crown, Lock, MessageCircle, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Star, Download, ShoppingCart, ArrowLeft, ShieldCheck, Clock, Zap, Crown, Lock, MessageCircle, CheckCircle, AlertTriangle, X, CreditCard, ShieldAlert } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -17,7 +18,11 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [error, setError] = useState('');
   const [buyError, setBuyError] = useState('');
   const [purchased, setPurchased] = useState(false);
+  
+  // Upgrade Modal State
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [upgradeStep, setUpgradeStep] = useState(1); // 1: Select Plan, 2: Pay
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [upgrading, setUpgrading] = useState('');
 
   useEffect(() => {
@@ -38,17 +43,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       if (res.ok) {
         const data = await res.json();
         setUser(data.data);
-        // Also sync to localStorage for navbar compatibility
         localStorage.setItem('user', JSON.stringify(data.data));
 
-        // Fetch subscription status
         const subRes = await fetch('/api/users/subscription');
         if (subRes.ok) {
           const subData = await subRes.json();
           setSubscription(subData.data);
         }
       } else {
-        // Clear stale localStorage tokens
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user');
       }
@@ -99,11 +101,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
       if (!res.ok) {
         if (res.status === 403) {
-          // Subscription limit hit
           setBuyError(data.error);
           setShowUpgrade(true);
+          setUpgradeStep(1);
         } else if (res.status === 409) {
-          // Already purchased
           setPurchased(true);
           setBuyError('');
           router.push(`/dashboard/messages?projectId=${projectId}&sellerId=${project.seller_id}&sellerUsername=${project.seller_username}`);
@@ -114,12 +115,10 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       }
 
       setPurchased(true);
-      // Redirect to chat with seller
       setTimeout(() => {
         router.push(`/dashboard/messages?projectId=${projectId}&sellerId=${data.data.sellerId}&sellerUsername=${data.data.sellerUsername}`);
       }, 1500);
 
-      // Refresh subscription count
       const subRes = await fetch('/api/users/subscription');
       if (subRes.ok) {
         const subData = await subRes.json();
@@ -132,7 +131,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const handleUpgrade = async (tier: string) => {
+  const initiateUpgrade = (tierId: string) => {
+    if (tierId === 'free') return; // Cannot downgrade to free this way usually
+    setSelectedPlanId(tierId);
+    setUpgradeStep(2); // Jump to payment
+  };
+
+  const handleFinalUpgrade = async (tier: string) => {
     setUpgrading(tier);
     try {
       const res = await fetch('/api/users/subscription', {
@@ -144,6 +149,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       if (res.ok) {
         setSubscription(data.data);
         setShowUpgrade(false);
+        setUpgradeStep(1);
         setBuyError('');
       }
     } catch (e) {}
@@ -179,13 +185,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   }
 
   const tierConfig = {
-    free:  { icon: <Zap className="w-4 h-4" />,    label: 'Free',  color: 'text-emerald-400',  bg: 'bg-emerald-500/10 border-emerald-500/20',  limit: '1 project' },
-    pro:   { icon: <Star className="w-4 h-4" />,   label: 'Pro',   color: 'text-indigo-400',   bg: 'bg-indigo-500/10 border-indigo-500/20',   limit: '10 projects' },
-    max:   { icon: <Crown className="w-4 h-4" />,  label: 'Max',   color: 'text-purple-400',   bg: 'bg-purple-500/10 border-purple-500/20',   limit: 'Unlimited' },
+    free:  { icon: <Zap className="w-4 h-4" />,    label: 'Free',  color: 'text-emerald-400',  bg: 'bg-emerald-500/10 border-emerald-500/20',  limit: '1 project', price: 0 },
+    pro:   { icon: <Star className="w-4 h-4" />,   label: 'Pro',   color: 'text-indigo-400',   bg: 'bg-indigo-500/10 border-indigo-500/20',   limit: '10 projects', price: 499 },
+    max:   { icon: <Crown className="w-4 h-4" />,  label: 'Max',   color: 'text-purple-400',   bg: 'bg-purple-500/10 border-purple-500/20',   limit: 'Unlimited', price: 999 },
   };
 
   const currentTier = subscription?.tier || 'free';
   const tc = tierConfig[currentTier as keyof typeof tierConfig];
+  const selectedTierConfig = selectedPlanId ? (tierConfig[selectedPlanId as keyof typeof tierConfig]) : null;
 
   return (
     <div className="min-h-screen bg-[#0d0d14] text-white">
@@ -193,88 +200,153 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
       {/* Upgrade Modal */}
       {showUpgrade && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#13131f] border border-white/10 rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Crown className="w-8 h-8 text-amber-400" />
-              </div>
-              <h2 className="text-2xl font-black mb-2">Upgrade Your Plan</h2>
-              <p className="text-white/50 text-sm">You've reached your purchase limit. Upgrade to buy more projects.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              {/* Free */}
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-5 h-5 text-emerald-400" />
-                  <span className="font-bold">Free</span>
-                </div>
-                <p className="text-3xl font-black mb-1">₹0</p>
-                <p className="text-white/40 text-xs mb-4">Forever</p>
-                <ul className="text-sm text-white/60 space-y-2 flex-1">
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> 1 project purchase</li>
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-emerald-400" /> Chat with sellers</li>
-                </ul>
-                {currentTier === 'free' ? (
-                  <span className="mt-4 text-center text-xs font-bold text-emerald-400 bg-emerald-500/10 py-2 rounded-xl">Current Plan</span>
-                ) : (
-                  <button onClick={() => handleUpgrade('free')} disabled={!!upgrading} className="mt-4 w-full py-2 rounded-xl border border-white/10 text-white/60 text-sm font-bold hover:bg-white/5 disabled:opacity-50 transition-colors">
-                    {upgrading === 'free' ? 'Activating...' : 'Downgrade'}
-                  </button>
-                )}
-              </div>
-
-              {/* Pro */}
-              <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-2xl p-5 flex flex-col relative overflow-hidden">
-                <div className="absolute top-3 right-3 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full">POPULAR</div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Star className="w-5 h-5 text-indigo-400" />
-                  <span className="font-bold text-indigo-300">Pro</span>
-                </div>
-                <p className="text-3xl font-black mb-1">₹499</p>
-                <p className="text-white/40 text-xs mb-4">per month</p>
-                <ul className="text-sm text-white/60 space-y-2 flex-1">
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-indigo-400" /> 10 project purchases</li>
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-indigo-400" /> Chat with sellers</li>
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-indigo-400" /> Priority support</li>
-                </ul>
-                {currentTier === 'pro' ? (
-                  <span className="mt-4 text-center text-xs font-bold text-indigo-400 bg-indigo-500/10 py-2 rounded-xl">Current Plan</span>
-                ) : (
-                  <button onClick={() => handleUpgrade('pro')} disabled={!!upgrading} className="mt-4 w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black disabled:opacity-50 transition-colors shadow-lg shadow-indigo-600/30">
-                    {upgrading === 'pro' ? 'Activating...' : 'Upgrade to Pro'}
-                  </button>
-                )}
-              </div>
-
-              {/* Max */}
-              <div className="bg-purple-600/10 border border-purple-500/30 rounded-2xl p-5 flex flex-col">
-                <div className="flex items-center gap-2 mb-3">
-                  <Crown className="w-5 h-5 text-purple-400" />
-                  <span className="font-bold text-purple-300">Max</span>
-                </div>
-                <p className="text-3xl font-black mb-1">₹999</p>
-                <p className="text-white/40 text-xs mb-4">per month</p>
-                <ul className="text-sm text-white/60 space-y-2 flex-1">
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /> Unlimited purchases</li>
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /> Chat with sellers</li>
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /> Priority support</li>
-                  <li className="flex items-center gap-1.5"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /> Early access</li>
-                </ul>
-                {currentTier === 'max' ? (
-                  <span className="mt-4 text-center text-xs font-bold text-purple-400 bg-purple-500/10 py-2 rounded-xl">Current Plan</span>
-                ) : (
-                  <button onClick={() => handleUpgrade('max')} disabled={!!upgrading} className="mt-4 w-full py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white text-sm font-black disabled:opacity-50 transition-opacity shadow-lg shadow-purple-600/20">
-                    {upgrading === 'max' ? 'Activating...' : 'Upgrade to Max'}
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <button onClick={() => setShowUpgrade(false)} className="w-full py-3 text-white/40 hover:text-white text-sm transition-colors">
-              Maybe later
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#13131f] border border-white/10 rounded-[40px] p-8 max-w-2xl w-full shadow-2xl relative overflow-hidden">
+            
+            {/* Background Glow */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 blur-[100px] pointer-events-none" />
+            
+            <button 
+              onClick={() => { setShowUpgrade(false); setUpgradeStep(1); }}
+              className="absolute top-8 right-8 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors z-10"
+            >
+              <X size={20} className="text-white/40" />
             </button>
+
+            {upgradeStep === 1 ? (
+              <>
+                <div className="text-center mb-10">
+                  <div className="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-amber-500/5">
+                    <Crown className="w-8 h-8 text-amber-400" />
+                  </div>
+                  <h2 className="text-3xl font-black mb-2 tracking-tight">Upgrade Your Plan</h2>
+                  <p className="text-white/50 text-sm">You've reached your purchase limit. Select a plan to continue.</p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-8">
+                  {/* Free */}
+                  <div className="bg-white/5 border border-white/10 rounded-3xl p-6 flex flex-col opacity-60">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Zap className="w-5 h-5 text-emerald-400" />
+                      <span className="font-bold">Free</span>
+                    </div>
+                    <p className="text-3xl font-black mb-1">₹0</p>
+                    <p className="text-white/40 text-[10px] uppercase font-bold tracking-widest mb-6 border-b border-white/5 pb-4">Standard</p>
+                    <ul className="text-xs text-white/50 space-y-3 flex-1">
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400/40" /> 1 project</li>
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-emerald-400/40" /> Chat access</li>
+                    </ul>
+                    <span className="mt-6 text-center text-[10px] font-bold text-white/30 bg-white/5 py-2.5 rounded-xl">Active Plan</span>
+                  </div>
+
+                  {/* Pro */}
+                  <div className="bg-indigo-600/10 border border-indigo-500/30 rounded-3xl p-6 flex flex-col relative overflow-hidden group hover:border-indigo-500/60 transition-colors">
+                    <div className="absolute top-4 right-4 bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-10">POPULAR</div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <Star className="w-5 h-5 text-indigo-400" />
+                      <span className="font-bold text-indigo-300">Pro</span>
+                    </div>
+                    <p className="text-3xl font-black mb-1">₹499</p>
+                    <p className="text-indigo-400/40 text-[10px] uppercase font-bold tracking-widest mb-6 border-b border-indigo-500/10 pb-4">Monthly</p>
+                    <ul className="text-xs text-white/70 space-y-3 flex-1">
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-indigo-400" /> 10 project purchases</li>
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-indigo-400" /> Group chat access</li>
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-indigo-400" /> Priority support</li>
+                    </ul>
+                    {currentTier === 'pro' ? (
+                      <span className="mt-6 text-center text-[10px] font-bold text-indigo-400 bg-indigo-500/10 py-2.5 rounded-xl border border-indigo-500/20">Active Plan</span>
+                    ) : (
+                      <button 
+                        onClick={() => initiateUpgrade('pro')} 
+                        className="mt-6 w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all shadow-lg shadow-indigo-600/30 active:scale-95"
+                      >
+                        Select Pro
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Max */}
+                  <div className="bg-purple-600/10 border border-purple-500/30 rounded-3xl p-6 flex flex-col group hover:border-purple-500/60 transition-colors">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Crown className="w-5 h-5 text-purple-400" />
+                      <span className="font-bold text-purple-300">Max</span>
+                    </div>
+                    <p className="text-3xl font-black mb-1">₹999</p>
+                    <p className="text-purple-400/40 text-[10px] uppercase font-bold tracking-widest mb-6 border-b border-purple-500/10 pb-4">Unlimited</p>
+                    <ul className="text-xs text-white/70 space-y-3 flex-1">
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /> Unlimited buys</li>
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /> Fast downloads</li>
+                      <li className="flex items-center gap-2"><CheckCircle className="w-3.5 h-3.5 text-purple-400" /> Early access</li>
+                    </ul>
+                    {currentTier === 'max' ? (
+                      <span className="mt-6 text-center text-[10px] font-bold text-purple-400 bg-purple-500/10 py-2.5 rounded-xl border border-purple-500/20">Active Plan</span>
+                    ) : (
+                      <button 
+                        onClick={() => initiateUpgrade('max')} 
+                        className="mt-6 w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:opacity-90 text-white text-xs font-black shadow-lg shadow-purple-600/20 transition-all active:scale-95"
+                      >
+                        Select Max
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-center border-t border-white/5 pt-8">
+                  <p className="text-[10px] text-white/20 font-medium">Secure local payment processing active for student hub accounts.</p>
+                </div>
+              </>
+            ) : (
+              <div className="max-w-md mx-auto py-4">
+                <button 
+                  onClick={() => setUpgradeStep(1)}
+                  className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors text-xs font-bold mb-8 group"
+                >
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                  Back to Plan Selection
+                </button>
+
+                <div className="text-center mb-8">
+                  <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/20">
+                    <CreditCard className="w-8 h-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-black mb-2">Scan &amp; Pay</h2>
+                  <p className="text-white/40 text-sm">Complete your upgrade to <span className="text-white font-bold">{selectedPlanId.toUpperCase()}</span></p>
+                </div>
+
+                <div className="bg-white rounded-[32px] p-6 mb-8 shadow-2xl relative">
+                  <img src="/payment-qr.png" alt="Payment QR" className="w-full aspect-square object-contain" />
+                  <div className="absolute inset-x-0 -bottom-3 flex justify-center">
+                    <div className="bg-[#13131f] border border-white/10 px-4 py-1.5 rounded-full text-[10px] font-black tracking-widest uppercase text-white shadow-xl">
+                      studenthub@upi
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center bg-white/5 border border-white/5 rounded-2xl px-6 py-4 mb-8">
+                  <span className="text-white/40 text-sm font-bold">Total Amount</span>
+                  <span className="text-2xl font-black">₹{selectedTierConfig?.price}</span>
+                </div>
+
+                <div className="flex gap-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl mb-8">
+                  <ShieldAlert className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-amber-500/80 leading-relaxed font-bold uppercase tracking-wider">
+                    Scan using PhonePe, GPay or any UPI app. After payment, click verify below.
+                  </p>
+                </div>
+
+                <Button 
+                  onClick={() => handleFinalUpgrade(selectedPlanId)}
+                  disabled={!!upgrading}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-8 text-lg font-black rounded-3xl shadow-2xl shadow-indigo-600/30 active:scale-95 transition-all"
+                >
+                  {upgrading ? (
+                    <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Verifying Payment...</>
+                  ) : (
+                    "I have Paid & Confirmed"
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}

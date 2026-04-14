@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/ui/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Check, Zap, Star, Crown, ArrowRight, Sparkles, MessageCircle, ShieldCheck, Headphones, Infinity } from 'lucide-react';
+import { Check, Zap, Star, Crown, ArrowRight, Sparkles, MessageCircle, ShieldCheck, Headphones, Infinity, X, ShieldAlert, CreditCard } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const plans = [
   {
@@ -81,6 +82,11 @@ export default function PricingPage() {
   const [currentTier, setCurrentTier] = useState<string>('free');
   const [upgrading, setUpgrading] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  
+  // Payment Modal State
+  const [showPayment, setShowPayment] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     fetch('/api/users/me').then(r => r.ok ? r.json() : null).then(d => {
@@ -102,10 +108,19 @@ export default function PricingPage() {
     router.push('/login');
   };
 
-  const handleUpgrade = async (tier: string) => {
+  const initiateUpgrade = (plan: any) => {
     if (!user) { router.push('/login?callbackUrl=/pricing'); return; }
-    setUpgrading(tier);
-    setSuccessMsg('');
+    if (plan.id === 'free') {
+       // Just call it directly for free tier if it was allowed, but usually you're already free
+       handleFinalUpgrade('free');
+       return;
+    }
+    setSelectedPlan(plan);
+    setShowPayment(true);
+  };
+
+  const handleFinalUpgrade = async (tier: string) => {
+    setVerifying(true);
     try {
       const res = await fetch('/api/users/subscription', {
         method: 'POST',
@@ -116,15 +131,88 @@ export default function PricingPage() {
       if (res.ok) {
         setCurrentTier(tier);
         setSuccessMsg(data.message || `Successfully switched to ${tier} plan!`);
+        setShowPayment(false);
         setTimeout(() => setSuccessMsg(''), 4000);
       }
-    } catch (e) {}
-    setUpgrading('');
+    } catch (e) {
+      console.error('Upgrade failed:', e);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#0d0d14] text-white">
       <Navbar user={user} onLogout={handleLogout} />
+
+      {/* Payment Modal */}
+      {showPayment && selectedPlan && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#13131f] border border-white/10 rounded-[32px] p-8 max-w-md w-full shadow-2xl relative overflow-hidden">
+            {/* Decoration */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl pointer-events-none" />
+            
+            <button 
+              onClick={() => setShowPayment(false)}
+              className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors"
+            >
+              <X size={20} className="text-white/40" />
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-500/20">
+                <CreditCard className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-2xl font-black mb-2">Complete Payment</h2>
+              <p className="text-white/40 text-sm">Scan the QR code below to pay for the <span className="text-white font-bold">{selectedPlan.name}</span> plan.</p>
+            </div>
+
+            <div className="bg-white rounded-3xl p-6 mb-8 shadow-inner relative group">
+              <div className="absolute inset-0 bg-indigo-600/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
+              <img 
+                src="/payment-qr.png" 
+                alt="Payment QR Code" 
+                className="w-full aspect-square object-contain"
+              />
+              <div className="mt-4 text-center">
+                <p className="text-[#0d0d14] text-xs font-black tracking-widest uppercase">UPI ID: studenthub@upi</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-8">
+              <div className="flex justify-between items-center py-3 border-b border-white/5">
+                <span className="text-white/40 text-sm">Plan Price</span>
+                <span className="text-xl font-black text-white">₹{selectedPlan.price}</span>
+              </div>
+              <div className="flex items-start gap-3 p-4 bg-white/5 rounded-2xl border border-white/5">
+                <ShieldAlert className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-white/40 leading-relaxed font-medium">
+                  Please keep a screenshot of the payment confirmation. After payment, click the button below to activate your plan instantly.
+                </p>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => handleFinalUpgrade(selectedPlan.id)}
+              disabled={verifying}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-7 text-lg font-black rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all"
+            >
+              {verifying ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Verifying...</span>
+                </div>
+              ) : (
+                "I've Completed & Paid"
+              )}
+            </Button>
+            
+            <p className="text-center text-[10px] text-white/20 mt-6 font-medium">
+              By clicking the button you agree that you have scanned and paid the exact amount.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hero */}
       <div className="text-center pt-20 pb-12 px-4 relative overflow-hidden">
@@ -134,17 +222,17 @@ export default function PricingPage() {
 
         <div className="relative">
           <div className="inline-flex items-center gap-2 bg-indigo-600/20 border border-indigo-500/30 rounded-full px-4 py-1.5 text-indigo-400 text-xs font-bold uppercase tracking-widest mb-6">
-            <Sparkles className="w-3.5 h-3.5" /> Simple Pricing
+            <Sparkles className="w-3.5 h-3.5" /> Premium Access
           </div>
           <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-4">
             Choose Your <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">Plan</span>
           </h1>
           <p className="text-white/50 text-lg max-w-xl mx-auto">
-            Start free, upgrade when you need more. No hidden fees. Simulated payments — upgrade instantly.
+            Get more projects and chat access. Scan and upgrade in seconds.
           </p>
 
           {successMsg && (
-            <div className="mt-6 inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 px-6 py-3 rounded-2xl text-sm font-bold">
+            <div className="mt-6 inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 px-6 py-3 rounded-2xl text-sm font-bold animate-in fade-in zoom-in duration-300">
               <Check className="w-4 h-4" /> {successMsg}
             </div>
           )}
@@ -222,15 +310,10 @@ export default function PricingPage() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => handleUpgrade(plan.id)}
-                    disabled={!!upgrading}
+                    onClick={() => initiateUpgrade(plan)}
                     className={`w-full py-3.5 rounded-2xl text-sm font-black transition-all active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 ${plan.ctaStyle}`}
                   >
-                    {upgrading === plan.id ? (
-                      <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Activating...</>
-                    ) : (
-                      <>{plan.cta} <ArrowRight className="w-4 h-4" /></>
-                    )}
+                    <>{plan.cta} <ArrowRight className="w-4 h-4" /></>
                   </button>
                 )}
               </div>
@@ -241,7 +324,7 @@ export default function PricingPage() {
         {/* FAQ / Notes */}
         <div className="mt-16 text-center">
           <p className="text-white/30 text-sm mb-2">
-            💡 This is a simulated payment system. Clicking upgrade instantly activates your plan.
+            💡 Simply scan the QR code and pay. We provide instant activation upon your confirmation.
           </p>
           <p className="text-white/20 text-xs">
             All plans include chat access with sellers after purchase. Need help?{' '}
