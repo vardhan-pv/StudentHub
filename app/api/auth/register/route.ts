@@ -5,10 +5,14 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { z } from 'zod';
 
 const registerSchema = z.object({
-  email: z.string().email('Invalid email'),
-  username: z.string().min(3).max(20),
-  fullName: z.string().min(2),
-  password: z.string().min(8),
+  email: z.string().email('Invalid email address format'),
+  username: z.string().min(3, 'Username must be at least 3 characters').max(20, 'Username cannot exceed 20 characters'),
+  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  password: z.string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
   role: z.enum(['buyer', 'seller', 'both']),
 });
 
@@ -19,31 +23,16 @@ export async function POST(request: NextRequest) {
     // Validate request
     const validation = registerSchema.safeParse(body);
     if (!validation.success) {
+      const errorMsg = validation.error.errors[0]?.message || 'Invalid input data';
       return NextResponse.json(
-        errorResponse('Invalid input data'),
+        errorResponse(errorMsg),
         { status: 400 }
       );
     }
 
     const { email, username, fullName, password, role } = validation.data;
 
-    // Validate email format
-    const isValidEmail = await validateEmail(email);
-    if (!isValidEmail) {
-      return NextResponse.json(
-        errorResponse('Invalid email format'),
-        { status: 400 }
-      );
-    }
 
-    // Validate password strength
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      return NextResponse.json(
-        errorResponse(passwordValidation.errors.join(', ')),
-        { status: 400 }
-      );
-    }
 
     const { supabase } = await import('@/lib/supabase');
 

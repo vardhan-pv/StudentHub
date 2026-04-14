@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Navbar } from '@/components/ui/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { TrendingUp, Download, ShoppingCart, Plus, Settings, LogOut, MessageSquare } from 'lucide-react';
+import { TrendingUp, Download, ShoppingCart, Plus, Settings, LogOut, MessageSquare, PlusCircle } from 'lucide-react';
 
 export default function Dashboard() {
   const router = useRouter();
@@ -41,99 +42,88 @@ export default function Dashboard() {
   const statCards = [
     { label: 'Total Sales', value: stats?.stats?.totalSales ?? '-', icon: ShoppingCart, gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)', glow: 'rgba(99,102,241,0.25)' },
     { label: 'Total Earnings', value: stats?.stats?.totalEarnings != null ? `₹${stats.stats.totalEarnings}` : '-', icon: TrendingUp, gradient: 'linear-gradient(135deg,#10b981,#059669)', glow: 'rgba(16,185,129,0.25)' },
-    { label: 'Projects', value: stats?.stats?.totalProjects ?? '-', icon: Plus, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', glow: 'rgba(245,158,11,0.25)' },
+    { label: 'Projects', value: stats?.stats?.totalProjects ?? '-', icon: PlusCircle, gradient: 'linear-gradient(135deg,#f59e0b,#d97706)', glow: 'rgba(245,158,11,0.25)' },
     { label: 'Downloads', value: stats?.stats?.totalDownloads ?? '-', icon: Download, gradient: 'linear-gradient(135deg,#ec4899,#db2777)', glow: 'rgba(236,72,153,0.25)' },
   ];
 
   return (
     <div className="min-h-screen" style={{ background: '#0d0d14', color: '#fff' }}>
-
-      {/* NAV */}
-      <nav style={{ background: 'rgba(13,13,20,0.95)', borderBottom: '1px solid rgba(255,255,255,0.07)', backdropFilter: 'blur(20px)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-            <div style={{ width: 38, height: 38, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px rgba(99,102,241,0.4)' }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>SH</span>
-            </div>
-            <span style={{ fontWeight: 700, fontSize: 17, color: '#fff' }}>Student Hub</span>
-          </Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Link href="/marketplace"><button style={{ color: 'rgba(255,255,255,0.6)', background: 'none', border: 'none', padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 500 }}>Marketplace</button></Link>
-            <div style={{ height: 24, width: 1, background: 'rgba(255,255,255,0.1)' }} />
-            <div style={{ width: 34, height: 34, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>
-              {user.username?.[0]?.toUpperCase()}
-            </div>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600, fontSize: 14 }}>{user.username}</span>
-            <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>
-              <LogOut size={14} /> Logout
-            </button>
-          </div>
-        </div>
-      </nav>
+      
+      <Navbar user={user} onLogout={handleLogout} />
 
       <div className="max-w-7xl mx-auto px-6 py-10">
 
         {/* HEADER */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
+        <div className="flex flex-col md:flex-row justify-between items-start gap-8 mb-10">
           <div>
-            <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-1.5px', marginBottom: 8 }}>Dashboard</h1>
-            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>Welcome back, <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{user.username}</span> 👋</p>
+            <h1 className="text-3xl md:text-4xl font-black tracking-tight mb-2">Dashboard</h1>
+            <p className="text-white/40 text-sm md:text-base font-medium">Welcome back, <span className="text-indigo-400 font-bold">@{user.username}</span> 👋</p>
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            {[
-              { label: 'Messages', href: '/dashboard/messages', icon: MessageSquare, style: { background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.35)', color: '#a5b4fc' } },
-              { label: '+ Upload', href: '/dashboard/upload', icon: null, style: { background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', color: '#fff', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' } },
-              { label: 'Settings', href: '/dashboard/settings', icon: Settings, style: { background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' } },
-            ].map(({ label, href, icon: Icon, style: btnStyle }) => (
-              <Link key={label} href={href} style={{ textDecoration: 'none' }}>
-                <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 10, cursor: 'pointer', fontWeight: 600, fontSize: 14, transition: 'all 0.2s', ...btnStyle }}>
-                  {Icon && <Icon size={15} />} {label}
-                </button>
-              </Link>
-            ))}
+          <div className="flex flex-wrap gap-2 w-full md:w-auto">
+            <Link href="/dashboard/messages" className="flex-1 sm:flex-none">
+              <button className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl font-bold text-sm hover:bg-indigo-500/20 transition-all">
+                <MessageSquare size={18} /> Messages
+              </button>
+            </Link>
+            <Link href="/dashboard/upload" className="flex-1 sm:flex-none">
+              <button className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all">
+                <Plus size={18} /> Upload Project
+              </button>
+            </Link>
           </div>
         </div>
 
-        {error && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171', padding: '12px 16px', borderRadius: 10, marginBottom: 24, fontSize: 14 }}>{error}</div>}
+        {error && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl mb-8 text-sm font-medium">
+            {error}
+          </div>
+        )}
 
         {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 24 }}>
-            {[1,2,3,4].map(i => <div key={i} style={{ height: 110, background: 'rgba(255,255,255,0.04)', borderRadius: 16 }} />)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1,2,3,4].map(i => <div key={i} className="h-32 bg-white/5 rounded-2xl animate-pulse" />)}
           </div>
         ) : stats ? (
           <>
             {/* STAT CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 20, marginBottom: 40 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
               {statCards.map(({ label, value, icon: Icon, gradient, glow }) => (
-                <div key={label} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: '24px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: gradient, borderRadius: '50%', opacity: 0.12 }} />
-                  <div style={{ width: 44, height: 44, background: gradient, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, boxShadow: `0 4px 15px ${glow}` }}>
-                    <Icon size={20} color="#fff" />
+                <div key={label} className="group bg-white/5 border border-white/10 rounded-2xl p-6 relative overflow-hidden transition-all hover:border-white/20">
+                  <div style={{ position: 'absolute', top: -10, right: -10, width: 80, height: 80, background: gradient, borderRadius: '50%', opacity: 0.05 }} />
+                  <div className="flex items-center gap-4 mb-4">
+                    <div style={{ background: gradient, boxShadow: `0 4px 15px ${glow}` }} className="w-10 h-10 rounded-xl flex items-center justify-center">
+                      <Icon size={18} color="#fff" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest">{label}</p>
+                      <p className="text-2xl font-black text-white">{value}</p>
+                    </div>
                   </div>
-                  <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{label}</p>
-                  <p style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: '-1px' }}>{value}</p>
                 </div>
               ))}
             </div>
 
             {/* BOTTOM PANELS */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
               {/* Recent Sales */}
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 28 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, letterSpacing: '-0.5px' }}>Recent Sales</h2>
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-xl font-black tracking-tight">Recent Sales</h2>
+                  <ShoppingCart size={20} className="text-white/20" />
+                </div>
                 {stats.recentSales?.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>No sales yet</div>
+                  <div className="text-center py-12 text-white/30 text-sm italic">You haven't made any sales yet.</div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="space-y-4">
                     {stats.recentSales?.map((sale: any, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
-                        <div>
-                          <p style={{ fontWeight: 600, fontSize: 14, marginBottom: 2 }}>{sale.projectTitle}</p>
-                          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>by {sale.buyerUsername}</p>
+                      <div key={i} className="flex justify-between items-center p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-colors">
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm truncate">{sale.projectTitle}</p>
+                          <p className="text-[10px] text-white/40 font-bold uppercase mt-1">by {sale.buyerUsername}</p>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ fontWeight: 700, fontSize: 16, color: '#34d399' }}>+₹{sale.amount}</p>
-                          <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>{new Date(sale.date).toLocaleDateString()}</p>
+                        <div className="text-right shrink-0 ml-4">
+                          <p className="font-black text-green-400">+₹{sale.amount}</p>
+                          <p className="text-[9px] text-white/30 font-bold mt-1 uppercase">{new Date(sale.date).toLocaleDateString()}</p>
                         </div>
                       </div>
                     ))}
@@ -142,22 +132,25 @@ export default function Dashboard() {
               </div>
 
               {/* Top Projects */}
-              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 28 }}>
-                <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, letterSpacing: '-0.5px' }}>Top Projects</h2>
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-xl font-black tracking-tight">Top Projects</h2>
+                  <TrendingUp size={20} className="text-white/20" />
+                </div>
                 {stats.topProjects?.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>No projects yet</div>
+                  <div className="text-center py-12 text-white/30 text-sm italic">Upload projects to see your top performing ones here.</div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="space-y-4">
                     {stats.topProjects?.map((project: any, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div style={{ width: 28, height: 28, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{i + 1}</div>
-                          <div>
-                            <p style={{ fontWeight: 600, fontSize: 14 }}>{project.title}</p>
-                            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>{project.downloads} downloads</p>
+                      <div key={i} className="flex justify-between items-center p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-colors">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className="w-8 h-8 bg-indigo-600/20 text-indigo-400 rounded-lg flex items-center justify-center text-xs font-black shrink-0">{i + 1}</div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm truncate">{project.title}</p>
+                            <p className="text-[10px] text-white/40 font-bold uppercase mt-1">{project.downloads} downloads</p>
                           </div>
                         </div>
-                        <span style={{ fontWeight: 800, color: '#a5b4fc', fontSize: 16 }}>₹{project.price}</span>
+                        <span className="font-black text-white/80 ml-4 shrink-0">₹{project.price}</span>
                       </div>
                     ))}
                   </div>
@@ -166,30 +159,33 @@ export default function Dashboard() {
             </div>
 
             {/* My Purchases */}
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 18, padding: 28 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20, letterSpacing: '-0.5px' }}>My Purchases</h2>
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-black tracking-tight">My Purchases</h2>
+                <Download size={20} className="text-white/20" />
+              </div>
               {!stats.purchases || stats.purchases.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                  <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 14, marginBottom: 16 }}>No purchases yet. Head to the marketplace to explore projects!</p>
+                <div className="text-center py-20 bg-white/5 border border-white/5 rounded-2xl">
+                  <p className="text-white/40 text-sm mb-8">Explore the marketplace to find projects and resources.</p>
                   <Link href="/marketplace">
-                    <button style={{ padding: '10px 24px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+                    <button className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all active:scale-95 shadow-lg shadow-indigo-600/20">
                       Browse Marketplace
                     </button>
                   </Link>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {stats.purchases.map((purchase: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', background: 'rgba(255,255,255,0.03)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div>
-                        <p style={{ fontWeight: 600, fontSize: 15, marginBottom: 4 }}>{purchase.projectTitle}</p>
-                        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>{new Date(purchase.date).toLocaleDateString()}</p>
+                    <div key={i} className="flex justify-between items-center p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all group">
+                      <div className="min-w-0">
+                        <p className="font-bold text-base truncate mb-1">{purchase.projectTitle}</p>
+                        <p className="text-[10px] text-white/40 font-bold uppercase">{new Date(purchase.date).toLocaleDateString()}</p>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-                        <p style={{ fontWeight: 700, fontSize: 16 }}>₹{purchase.amount}</p>
+                      <div className="flex flex-col items-end gap-3 shrink-0 ml-4">
+                        <p className="font-black text-lg text-white/90">₹{purchase.amount}</p>
                         <Link href={`/dashboard/orders/${purchase.orderId}`}>
-                          <button style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 8, cursor: 'pointer', color: '#a5b4fc', fontSize: 12, fontWeight: 600 }}>
-                            <Download size={13} /> Download
+                          <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg font-bold text-[11px] shadow-lg shadow-indigo-600/10 hover:scale-105 transition-transform">
+                            <Download size={14} /> Download
                           </button>
                         </Link>
                       </div>
@@ -204,3 +200,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

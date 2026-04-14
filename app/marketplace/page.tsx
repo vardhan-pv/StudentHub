@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Navbar } from '@/components/ui/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Star, Download, Filter, X } from 'lucide-react';
@@ -55,155 +56,187 @@ export default function MarketplacePage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#0d0d14', color: '#fff' }}>
-
-      {/* NAV */}
-      <nav style={{ background: 'rgba(13,13,20,0.95)', borderBottom: '1px solid rgba(255,255,255,0.07)', backdropFilter: 'blur(20px)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
-            <div style={{ width: 38, height: 38, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px rgba(99,102,241,0.4)' }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 13 }}>SH</span>
-            </div>
-            <span style={{ fontWeight: 700, fontSize: 17 }}>Student Hub</span>
-          </Link>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {['Marketplace', 'Dashboard'].map((item) => (
-              <Link key={item} href={item === 'Marketplace' ? '/marketplace' : '/dashboard'}>
-                <button style={{ color: item === 'Marketplace' ? '#a5b4fc' : 'rgba(255,255,255,0.6)', background: item === 'Marketplace' ? 'rgba(99,102,241,0.15)' : 'none', border: 'none', padding: '7px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>{item}</button>
-              </Link>
-            ))}
-            {user ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: 16, marginLeft: 4 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>{user.username}</span>
-                <button onClick={handleLogout} style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}>Logout</button>
-              </div>
-            ) : (
-              <Link href="/login">
-                <button style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', color: '#fff', padding: '8px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>Login</button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </nav>
+      
+      <Navbar user={user} onLogout={handleLogout} />
 
       {/* HEADER */}
-      <div style={{ padding: '48px 24px 0', maxWidth: 1280, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>Marketplace</h1>
-        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15, marginBottom: 32 }}>Discover and buy student projects at the best prices</p>
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+          <div>
+            <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>Marketplace</h1>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>Discover and buy student projects at the best prices</p>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setShowFilters(!showFilters)} 
+            className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors text-sm font-semibold sm:hidden"
+          >
+            {showFilters ? <X size={18} /> : <Filter size={18} />}
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </button>
+        </div>
 
-        <form onSubmit={handleSearch}>
-          <div style={{ display: 'flex', gap: 12, marginBottom: 40 }}>
-            <div style={{ flex: 1, position: 'relative' }}>
+        <form onSubmit={handleSearch} className="mb-12">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
               <Search size={16} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.35)' }} />
               <input
                 placeholder="Search projects by title, category, or tags..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ width: '100%', padding: '12px 16px 12px 44px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 outline-none focus:border-indigo-500/50 transition-colors"
               />
             </div>
-            <button type="submit" style={{ padding: '12px 28px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: 12, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
-              <Search size={16} /> Search
-            </button>
-            <button type="button" onClick={() => setShowFilters(!showFilters)} style={{ padding: '12px 18px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-              <Filter size={16} /> Filters {showFilters && <X size={14} />}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 24px 80px', display: 'flex', gap: 32 }}>
-
-        {/* SIDEBAR */}
-        {showFilters && (
-          <div style={{ width: 240, flexShrink: 0 }}>
-            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 24, position: 'sticky', top: 80 }}>
-              <h3 style={{ fontWeight: 700, fontSize: 14, marginBottom: 20, color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: 1 }}>Category</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {['All Categories', ...CATEGORIES].map((cat) => {
-                  const val = cat === 'All Categories' ? '' : cat;
-                  const active = selectedCategory === val;
-                  return (
-                    <button key={cat} onClick={() => { setSelectedCategory(val); setPage(1); }}
-                      style={{ textAlign: 'left', padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 400, background: active ? 'rgba(99,102,241,0.25)' : 'transparent', color: active ? '#a5b4fc' : 'rgba(255,255,255,0.55)', transition: 'all 0.15s' }}>
-                      {cat}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* GRID */}
-        <div style={{ flex: 1 }}>
-          {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>
-              {[1,2,3,4,5,6].map(i => <div key={i} style={{ height: 240, background: 'rgba(255,255,255,0.04)', borderRadius: 16, animation: 'pulse 2s infinite' }} />)}
-            </div>
-          ) : projects.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '80px 24px', color: 'rgba(255,255,255,0.4)' }}>
-              <p style={{ fontSize: 18, marginBottom: 16 }}>No projects found</p>
-              <button onClick={() => { setSelectedCategory(''); setSearchTerm(''); setPage(1); fetchProjects(); }}
-                style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: 10, color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
-                Clear Filters
+            <div className="flex gap-2">
+              <button type="submit" className="flex-1 sm:flex-none px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2">
+                <Search size={18} /> Search
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setShowFilters(!showFilters)} 
+                className="hidden sm:flex px-6 py-3.5 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-colors items-center gap-2 whitespace-nowrap"
+              >
+                <Filter size={18} /> Filters {showFilters && <X size={16} />}
               </button>
             </div>
-          ) : (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24, marginBottom: 48 }}>
-                {projects.map((project: any) => (
-                  <Link key={project.id} href={`/project/${project.id}`} style={{ textDecoration: 'none' }}>
-                    <div style={{
-                      background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)',
-                      borderRadius: 18, padding: 24, cursor: 'pointer', height: '100%', boxSizing: 'border-box',
-                      transition: 'all 0.25s ease', display: 'flex', flexDirection: 'column'
-                    }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLElement; el.style.transform = 'translateY(-4px)'; el.style.borderColor = 'rgba(99,102,241,0.45)'; el.style.boxShadow = '0 16px 40px rgba(0,0,0,0.4)'; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLElement; el.style.transform = ''; el.style.borderColor = 'rgba(255,255,255,0.09)'; el.style.boxShadow = 'none'; }}>
-                      <span style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '3px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, display: 'inline-block', marginBottom: 14 }}>{project.category}</span>
-                      <h3 style={{ color: '#fff', fontSize: 16, fontWeight: 700, marginBottom: 8, lineHeight: 1.4 }}>{project.title}</h3>
-                      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13, marginBottom: 14, lineHeight: 1.6, flex: 1 }}>{project.description?.slice(0, 90)}...</p>
-                      <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 14 }}>by <span
-                        style={{ color: 'rgba(255,255,255,0.65)', fontWeight: 600, cursor: 'pointer' }}
-                        onClick={(e) => { e.preventDefault(); router.push(`/profile/${project.seller_username}`); }}>
-                        {project.seller_username}
-                      </span></p>
-                      {project.metadata?.tags?.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                          {project.metadata.tags.slice(0, 3).map((tag: string) => (
-                            <span key={tag} style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)', padding: '2px 8px', borderRadius: 6, fontSize: 11 }}>{tag}</span>
-                          ))}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 16 }}>
-                        <div style={{ display: 'flex', gap: 12 }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#fbbf24', fontSize: 13 }}><Star size={13} fill="#fbbf24" />{project.rating || 0}</span>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'rgba(255,255,255,0.4)', fontSize: 13 }}><Download size={13} />{project.downloads}</span>
-                        </div>
-                        <span style={{ color: '#a5b4fc', fontWeight: 800, fontSize: 20 }}>₹{project.price}</span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+          </div>
+        </form>
 
-              {totalPages > 1 && (
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
-                  <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}
-                    style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: '#fff', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.4 : 1, fontSize: 14 }}>← Prev</button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                    <button key={p} onClick={() => setPage(p)}
-                      style={{ width: 36, height: 36, borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 14, background: page === p ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'rgba(255,255,255,0.06)', color: '#fff' }}>{p}</button>
-                  ))}
-                  <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}
-                    style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: '#fff', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.4 : 1, fontSize: 14 }}>Next →</button>
+        <div className="flex flex-col lg:flex-row gap-10">
+          {/* SIDEBAR */}
+          {showFilters && (
+            <div className="w-full lg:w-64 flex-shrink-0">
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 lg:sticky lg:top-24">
+                <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-6 px-3">Filter by Category</h3>
+                <div className="flex flex-col gap-1">
+                  {['All Categories', ...CATEGORIES].map((cat) => {
+                    const val = cat === 'All Categories' ? '' : cat;
+                    const active = selectedCategory === val;
+                    return (
+                      <button 
+                        key={cat} 
+                        onClick={() => { setSelectedCategory(val); setPage(1); }}
+                        className={`text-left px-4 py-2.5 rounded-xl transition-all text-sm ${
+                          active ? 'bg-indigo-600/20 text-indigo-400 font-bold' : 'text-white/50 hover:bg-white/5 hover:text-white'
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    );
+                  })}
                 </div>
-              )}
-            </>
+              </div>
+            </div>
           )}
+
+          {/* GRID */}
+          <div className="flex-1">
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="h-64 bg-white/5 rounded-2xl animate-pulse" />)}
+              </div>
+            ) : projects.length === 0 ? (
+              <div className="text-center py-20 px-6 bg-white/5 rounded-3xl border border-white/5">
+                <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <X size={32} className="text-white/20" />
+                </div>
+                <h3 className="text-xl font-bold mb-2">No projects found</h3>
+                <p className="text-white/40 mb-8 max-w-xs mx-auto">Try adjusting your search terms or filters to find what you're looking for.</p>
+                <button onClick={() => { setSelectedCategory(''); setSearchTerm(''); setPage(1); fetchProjects(); }}
+                  className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-transform active:scale-95">
+                  Clear All Filters
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-12">
+                  {projects.map((project: any) => (
+                    <Link key={project.id} href={`/project/${project.id}`}>
+                      <div className="group bg-white/5 border border-white/10 rounded-2xl p-6 hover:border-indigo-500/50 hover:bg-white/10 transition-all duration-300 flex flex-col h-full hover:-translate-y-1 shadow-xl hover:shadow-indigo-500/10">
+                        <div className="flex justify-between items-start mb-4">
+                          <span className="bg-indigo-600/20 text-indigo-400 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider">{project.category}</span>
+                          <div className="flex items-center gap-1.5 bg-yellow-400/10 text-yellow-500 px-2 py-1 rounded-lg">
+                            <Star size={12} fill="currentColor" />
+                            <span className="text-[11px] font-bold">{project.rating || 0}</span>
+                          </div>
+                        </div>
+                        <h3 className="text-white font-bold text-lg mb-3 leading-tight group-hover:text-indigo-400 transition-colors">{project.title}</h3>
+                        <p className="text-white/40 text-[13px] leading-relaxed mb-6 line-clamp-2 flex-grow">{project.description}</p>
+                        
+                        <div className="flex items-center gap-2 mb-6 text-white/30 text-xs">
+                          <span>by</span>
+                          <span className="text-white/60 font-semibold hover:text-indigo-400 transition-colors">{project.seller_username}</span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-6 border-t border-white/5">
+                          <div className="flex gap-4">
+                            <div className="flex items-center gap-1.5 text-white/40 text-xs">
+                              <Download size={14} />
+                              <span>{project.downloads}</span>
+                            </div>
+                          </div>
+                          <div className="text-2xl font-black text-white">₹{project.price}</div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center gap-3">
+                    <button 
+                      onClick={() => setPage(Math.max(1, page - 1))} 
+                      disabled={page === 1}
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ArrowRight size={20} className="rotate-180" />
+                    </button>
+                    <div className="flex items-center gap-2">
+                       {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                        <button 
+                          key={p} 
+                          onClick={() => setPage(p)}
+                          className={`w-11 h-11 rounded-xl font-bold transition-all ${
+                            page === p ? 'bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-600/20' : 'bg-white/5 text-white/50 hover:bg-white/10'
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                    <button 
+                      onClick={() => setPage(Math.min(totalPages, page + 1))} 
+                      disabled={page === totalPages}
+                      className="p-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                    >
+                      <ArrowRight size={20} />
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+// Reuse lucide arrow for pagination
+const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2.5" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M5 12h14" />
+    <path d="m12 5 7 7-7 7" />
+  </svg>
+);
