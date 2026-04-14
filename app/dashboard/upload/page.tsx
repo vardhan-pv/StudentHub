@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Upload, FileUp, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, FileUp, AlertCircle, CheckCircle, Github, Search, Globe, Lock, ArrowRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -22,16 +22,26 @@ const CATEGORIES = [
   'Other',
 ];
 
+type UploadMethod = 'manual' | 'github';
+
 export default function UploadProjectPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
+  const [method, setMethod] = useState<UploadMethod>('manual');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  
+  // Manual Upload State
   const [uploadedFile, setUploadedFile] = useState<any>(null);
   const [uploading, setUploading] = useState(false);
+
+  // GitHub Import State
+  const [githubUrl, setGithubUrl] = useState('');
+  const [fetchingRepo, setFetchingRepo] = useState(false);
+  const [repoPreview, setRepoPreview] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -46,6 +56,45 @@ export default function UploadProjectPage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const fetchRepoInfo = async () => {
+    if (!githubUrl) return;
+    setError('');
+    setFetchingRepo(true);
+    setRepoPreview(null);
+
+    try {
+      // Basic extraction for preview
+      const regex = /(?:github\.com\/)([^\/]+)\/([^\/\s#\?]+)/;
+      const match = githubUrl.match(regex);
+      if (!match) {
+        setError('Invalid GitHub URL format');
+        return;
+      }
+      const [_, owner, repo] = match;
+      const cleanRepo = repo.replace('.git', '');
+
+      const res = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}`);
+      if (!res.ok) throw new Error('Repository not found or private');
+      
+      const data = await res.json();
+      setRepoPreview(data);
+      
+      // Auto-fill form
+      setFormData(prev => ({
+        ...prev,
+        title: data.name.charAt(0).toUpperCase() + data.name.slice(1).replace(/-/g, ' '),
+        description: data.description || '',
+        language: data.language || '',
+        tags: data.topics?.join(', ') || ''
+      }));
+
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch repository info');
+    } finally {
+      setFetchingRepo(false);
+    }
   };
 
   const uploadFileToServer = async (file: File) => {
@@ -158,8 +207,13 @@ export default function UploadProjectPage() {
     setError('');
     setSuccess('');
 
-    if (!uploadedFile) {
+    if (method === 'manual' && !uploadedFile) {
       setError('Please upload a file');
+      return;
+    }
+
+    if (method === 'github' && !githubUrl) {
+      setError('Please provide a GitHub URL');
       return;
     }
 
@@ -192,271 +246,412 @@ export default function UploadProjectPage() {
         return;
       }
 
-      const response = await fetch('/api/projects', {
+      const apiPath = method === 'github' ? '/api/github/import' : '/api/projects';
+      const payload = method === 'github' 
+        ? {
+            githubUrl,
+            price: parseFloat(formData.price),
+            category: formData.category,
+            tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+            title: formData.title,
+            description: formData.description
+          }
+        : {
+            title: formData.title,
+            description: formData.description,
+            category: formData.category,
+            price: parseFloat(formData.price),
+            fileUrl: uploadedFile.fileUrl,
+            fileKey: uploadedFile.fileKey,
+            fileName: uploadedFile.fileName,
+            fileSize: uploadedFile.fileSize,
+            metadata: {
+              tags: formData.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+              language: formData.language || undefined,
+              framework: formData.framework || undefined,
+            },
+          };
+
+      const response = await fetch(apiPath, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          price: parseFloat(formData.price),
-          fileUrl: uploadedFile.fileUrl,
-          fileKey: uploadedFile.fileKey,
-          fileName: uploadedFile.fileName,
-          fileSize: uploadedFile.fileSize,
-          metadata: {
-            tags: formData.tags
-              .split(',')
-              .map((tag) => tag.trim())
-              .filter(Boolean),
-            language: formData.language || undefined,
-            framework: formData.framework || undefined,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Failed to create project');
+        setError(data.error || 'Failed to process project');
         return;
       }
 
-      setSuccess('Project uploaded successfully!');
+      setSuccess(method === 'github' ? 'Repository imported and published!' : 'Project uploaded successfully!');
       setTimeout(() => {
         router.push('/dashboard');
       }, 2000);
     } catch (err) {
-      setError('Failed to create project');
+      setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">SH</span>
-            </div>
-            <span className="font-bold text-lg">Student Hub</span>
+    <div className="min-h-screen bg-white">
+      {/* Premium Header */}
+      <div className="bg-[#0f172a] text-white py-12">
+        <div className="max-w-5xl mx-auto px-6">
+          <Link href="/dashboard" className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-8 transition-colors">
+            <Github size={18} className="rotate-180" />
+            <span className="font-bold">Back to Dashboard</span>
           </Link>
+          <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tight">Create Listing</h1>
+          <p className="text-white/40 text-lg font-medium">Choose how you want to share your project with the community.</p>
         </div>
-      </nav>
+      </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <Card className="p-8">
-          <h1 className="text-3xl font-bold mb-2">Upload Project</h1>
-          <p className="text-gray-600 mb-8">Share your project with students worldwide</p>
+      <div className="max-w-5xl mx-auto px-6 -mt-8 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-8">
+            <Card className="overflow-hidden border-0 shadow-2xl rounded-[32px]">
+              {/* Method Switcher */}
+              <div className="flex p-2 bg-gray-100/50">
+                <button 
+                  onClick={() => setMethod('manual')}
+                  className={`flex-1 py-4 px-6 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 ${
+                    method === 'manual' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-white/50'
+                  }`}
+                >
+                  <FileUp size={20} />
+                  Manual Upload
+                </button>
+                <button 
+                  onClick={() => setMethod('github')}
+                  className={`flex-1 py-4 px-6 rounded-2xl font-bold transition-all flex items-center justify-center gap-3 ${
+                    method === 'github' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-white/50'
+                  }`}
+                >
+                  <Github size={20} />
+                  GitHub Import
+                </button>
+              </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <div>{error}</div>
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-6 flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <div>{success}</div>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* File Upload */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Step 1: Upload File</h2>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8">
-                {uploadedFile ? (
-                  <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <FileUp className="w-8 h-8 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold">{uploadedFile.fileName}</p>
-                      <p className="text-sm text-gray-600">
-                        {(uploadedFile.fileSize / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      Change
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center">
-                    <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-700 mb-2 font-semibold">Drop your file here</p>
-                    <p className="text-gray-600 text-sm mb-4">
-                      or click to browse (ZIP, RAR, 7Z, PDF up to 100MB)
-                    </p>
-                    <div className="flex justify-center gap-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                      >
-                        {uploading ? 'Uploading...' : 'Choose File'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="default"
-                        onClick={() => folderInputRef.current?.click()}
-                        disabled={uploading}
-                        className="bg-purple-600 hover:bg-purple-700"
-                      >
-                        {uploading ? 'Zipping...' : 'Choose Folder'}
-                      </Button>
-                    </div>
+              <div className="p-8 md:p-10">
+                {error && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 px-6 py-4 rounded-2xl mb-8 flex items-start gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm font-bold">{error}</div>
                   </div>
                 )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  hidden
-                  onChange={handleFileSelect}
-                  accept=".zip,.rar,.7z,.pdf"
-                />
-                <input
-                  ref={folderInputRef}
-                  type="file"
-                  hidden
-                  onChange={handleFolderSelect}
-                  {...{webkitdirectory: "true", directory: "true", multiple: true} as any}
-                />
+
+                {success && (
+                  <div className="bg-green-50 border border-green-100 text-green-600 px-6 py-4 rounded-2xl mb-8 flex items-start gap-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm font-bold">{success}</div>
+                  </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-12">
+                  
+                  {/* Step 1: Source */}
+                  <section>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-sm">1</div>
+                      <h2 className="text-xl font-black">Project Source</h2>
+                    </div>
+
+                    {method === 'manual' ? (
+                      <div className="group relative">
+                        <div className={`border-2 border-dashed rounded-[32px] p-10 transition-all ${
+                          uploadedFile ? 'bg-blue-50/50 border-blue-200' : 'border-gray-200 hover:border-blue-400 hover:bg-gray-50/50'
+                        }`}>
+                          {uploadedFile ? (
+                            <div className="flex items-center gap-6">
+                              <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center shadow-xl shadow-blue-600/20">
+                                <FileUp className="w-10 h-10 text-white" />
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-lg font-black">{uploadedFile.fileName}</p>
+                                <p className="text-blue-600 font-bold text-sm">
+                                  {(uploadedFile.fileSize / (1024 * 1024)).toFixed(2)} MB • Ready to publish
+                                </p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                className="rounded-2xl font-bold text-gray-400 hover:text-red-500"
+                                onClick={() => setUploadedFile(null)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="text-center">
+                              <Upload className="w-16 h-16 text-gray-300 mx-auto mb-6 group-hover:scale-110 transition-transform duration-300" />
+                              <h3 className="text-lg font-black mb-2">Drag & drop your code</h3>
+                              <p className="text-gray-400 font-medium mb-8">ZIP, RAR, 7Z, or PDF up to 100MB</p>
+                              
+                              <div className="flex flex-wrap justify-center gap-4">
+                                <Button
+                                  type="button"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  disabled={uploading}
+                                  className="bg-blue-600 hover:bg-blue-700 h-12 px-8 rounded-2xl font-bold shadow-lg shadow-blue-600/20"
+                                >
+                                  {uploading ? 'Uploading...' : 'Choose File'}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => folderInputRef.current?.click()}
+                                  disabled={uploading}
+                                  className="h-12 px-8 rounded-2xl font-bold border-gray-200"
+                                >
+                                  {uploading ? 'Zipping...' : 'Choose Folder'}
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <input ref={fileInputRef} type="file" hidden onChange={handleFileSelect} accept=".zip,.rar,.7z,.pdf" />
+                        <input ref={folderInputRef} type="file" hidden onChange={handleFolderSelect} {...{webkitdirectory: "true", directory: "true", multiple: true} as any} />
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="relative group">
+                          <Github className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-600 transition-colors" size={24} />
+                          <Input
+                            type="text"
+                            value={githubUrl}
+                            onChange={(e) => setGithubUrl(e.target.value)}
+                            onBlur={fetchRepoInfo}
+                            placeholder="https://github.com/username/repository"
+                            className="h-16 pl-14 pr-32 rounded-2xl border-gray-200 focus:ring-blue-500 font-bold bg-gray-50/50"
+                          />
+                          <Button
+                            type="button"
+                            onClick={fetchRepoInfo}
+                            disabled={fetchingRepo || !githubUrl}
+                            className="absolute right-2 top-2 bottom-2 bg-white hover:bg-gray-50 text-blue-600 px-6 rounded-xl font-bold border border-gray-100 shadow-sm"
+                          >
+                            {fetchingRepo ? 'Fetching...' : 'Fetch Repo'}
+                          </Button>
+                        </div>
+                        
+                        {repoPreview && (
+                          <div className="bg-gray-50 border border-gray-100 p-6 rounded-[28px] animate-in fade-in zoom-in-95 duration-300">
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 bg-white rounded-2xl shadow-sm border border-gray-100">
+                                  <Globe className="text-blue-600" size={24} />
+                                </div>
+                                <div>
+                                  <h4 className="font-black text-lg">{repoPreview.name}</h4>
+                                  <div className="flex items-center gap-3 text-sm font-bold text-gray-400 mt-1">
+                                    <span className="flex items-center gap-1"><Zap size={14} className="text-yellow-500" /> {repoPreview.stargazers_count} stars</span>
+                                    <span>•</span>
+                                    <span>{repoPreview.language || 'Multiple'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="bg-blue-100 text-blue-700 px-4 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">Verified Repo</span>
+                            </div>
+                            <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{repoPreview.description || 'No description provided.'}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* Step 2: Content */}
+                  <section>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-sm">2</div>
+                      <h2 className="text-xl font-black">Project Details</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <FieldGroup className="md:col-span-2">
+                        <FieldLabel className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 block">Project Title</FieldLabel>
+                        <Input
+                          type="text"
+                          name="title"
+                          value={formData.title}
+                          onChange={handleInputChange}
+                          placeholder="e.g., React Todo App with Redux"
+                          className="h-14 rounded-2xl border-gray-200 focus:ring-blue-500 font-bold"
+                          required
+                        />
+                      </FieldGroup>
+
+                      <FieldGroup className="md:col-span-2">
+                        <FieldLabel className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 block">Description</FieldLabel>
+                        <textarea
+                          name="description"
+                          value={formData.description}
+                          onChange={handleInputChange}
+                          placeholder="Describe your project, features, and what's included..."
+                          rows={6}
+                          className="w-full px-5 py-4 border border-gray-200 rounded-[28px] focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium leading-relaxed bg-gray-50/30"
+                          required
+                        />
+                        <div className="flex justify-between mt-3 px-2">
+                          <p className="text-[10px] text-gray-300 font-black uppercase tracking-widest">At least 20 characters</p>
+                          <p className="text-[10px] text-gray-400 font-black tracking-widest">{formData.description.length}/2000</p>
+                        </div>
+                      </FieldGroup>
+
+                      <FieldGroup>
+                        <FieldLabel className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 block">Category</FieldLabel>
+                        <select
+                          name="category"
+                          value={formData.category}
+                          onChange={handleInputChange}
+                          className="w-full h-14 px-5 border border-gray-200 rounded-2xl focus:ring-blue-500 font-bold appearance-none bg-white"
+                          required
+                        >
+                          <option value="">Select Category</option>
+                          {CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </FieldGroup>
+
+                      <FieldGroup>
+                        <FieldLabel className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 block">Price (₹)</FieldLabel>
+                        <div className="relative">
+                          <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-gray-400 text-lg">₹</span>
+                          <Input
+                            type="number"
+                            name="price"
+                            value={formData.price}
+                            onChange={handleInputChange}
+                            placeholder="299"
+                            className="h-14 pl-12 rounded-2xl border-gray-200 focus:ring-blue-500 font-black text-lg"
+                            min="1"
+                            required
+                          />
+                        </div>
+                      </FieldGroup>
+                    </div>
+                  </section>
+
+                  {/* Step 3: Meta */}
+                  <section>
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-black text-sm">3</div>
+                      <h2 className="text-xl font-black">Optimization (Optional)</h2>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <FieldGroup className="md:col-span-2">
+                        <FieldLabel className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 block">Tags (comma-separated)</FieldLabel>
+                        <Input
+                          type="text"
+                          name="tags"
+                          value={formData.tags}
+                          onChange={handleInputChange}
+                          placeholder="React, JavaScript, CSS, Node.js"
+                          className="h-14 rounded-2xl border-gray-200 font-bold"
+                        />
+                      </FieldGroup>
+                      
+                      <FieldGroup>
+                        <FieldLabel className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 block">Language</FieldLabel>
+                        <Input
+                          type="text"
+                          name="language"
+                          value={formData.language}
+                          onChange={handleInputChange}
+                          className="h-14 rounded-2xl border-gray-200 font-bold"
+                        />
+                      </FieldGroup>
+
+                      <FieldGroup>
+                        <FieldLabel className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 block">Framework</FieldLabel>
+                        <Input
+                          type="text"
+                          name="framework"
+                          value={formData.framework}
+                          onChange={handleInputChange}
+                          className="h-14 rounded-2xl border-gray-200 font-bold"
+                        />
+                      </FieldGroup>
+                    </div>
+                  </section>
+
+                  {/* Action */}
+                  <div className="pt-10 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
+                    <Button
+                      type="submit"
+                      disabled={loading || uploading || (method === 'manual' && !uploadedFile) || (method === 'github' && !githubUrl)}
+                      className="flex-1 h-16 rounded-[24px] bg-blue-600 hover:bg-blue-700 text-white text-lg font-black shadow-2xl shadow-blue-600/30 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {loading ? (
+                        <>Processing...</>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          Publish Listing <ArrowRight size={20} />
+                        </div>
+                      )}
+                    </Button>
+                    <Link href="/dashboard" className="sm:w-1/3">
+                      <Button variant="ghost" type="button" className="w-full h-16 rounded-[24px] font-bold text-gray-400 hover:bg-gray-100">
+                        Discard
+                      </Button>
+                    </Link>
+                  </div>
+                </form>
               </div>
-            </div>
+            </Card>
+          </div>
 
-            {/* Project Details */}
-            <div>
-              <h2 className="text-lg font-semibold mb-4">Step 2: Project Details</h2>
+          {/* Guidelines Sidebar */}
+          <div className="space-y-6">
+            <Card className="p-8 border-0 shadow-lg rounded-[32px] bg-blue-600 text-white">
+              <h3 className="text-xl font-black mb-6">Why GitHub Import?</h3>
+              <ul className="space-y-6">
+                <li className="flex gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0"><Zap size={18} /></div>
+                  <div>
+                    <p className="font-bold text-sm">Lightning Fast</p>
+                    <p className="text-white/60 text-xs mt-1 leading-relaxed">Import projects in seconds by simply pasting a URL.</p>
+                  </div>
+                </li>
+                <li className="flex gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0"><Lock size={18} /></div>
+                  <div>
+                    <p className="font-bold text-sm">Secure Snapshots</p>
+                    <p className="text-white/60 text-xs mt-1 leading-relaxed">We snapshot your code at import to ensure buyers always have access.</p>
+                  </div>
+                </li>
+                <li className="flex gap-4">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center shrink-0"><Github size={18} /></div>
+                  <div>
+                    <p className="font-bold text-sm">Repo Details</p>
+                    <p className="text-white/60 text-xs mt-1 leading-relaxed">We automatically fetch details like stars, language and readme.</p>
+                  </div>
+                </li>
+              </ul>
+            </Card>
 
-              <FieldGroup>
-                <FieldLabel>Project Title *</FieldLabel>
-                <Input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  placeholder="e.g., React Todo App with Redux"
-                  maxLength={200}
-                  required
-                />
-              </FieldGroup>
-
-              <FieldGroup>
-                <FieldLabel>Description *</FieldLabel>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Describe your project, features, and what's included..."
-                  rows={5}
-                  maxLength={2000}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-sans"
-                  required
-                />
-                <p className="text-xs text-gray-600 mt-1">
-                  {formData.description.length}/2000
-                </p>
-              </FieldGroup>
-
-              <FieldGroup>
-                <FieldLabel>Category *</FieldLabel>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select a category...</option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </FieldGroup>
-
-              <FieldGroup>
-                <FieldLabel>Tags (comma-separated)</FieldLabel>
-                <Input
-                  type="text"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleInputChange}
-                  placeholder="e.g., React, JavaScript, CSS, Node.js"
-                />
-              </FieldGroup>
-
-              <div className="grid grid-cols-2 gap-4">
-                <FieldGroup>
-                  <FieldLabel>Language</FieldLabel>
-                  <Input
-                    type="text"
-                    name="language"
-                    value={formData.language}
-                    onChange={handleInputChange}
-                    placeholder="e.g., JavaScript, Python, Java"
-                  />
-                </FieldGroup>
-
-                <FieldGroup>
-                  <FieldLabel>Framework/Library</FieldLabel>
-                  <Input
-                    type="text"
-                    name="framework"
-                    value={formData.framework}
-                    onChange={handleInputChange}
-                    placeholder="e.g., React, Django, Laravel"
-                  />
-                </FieldGroup>
+            <Card className="p-8 border-0 shadow-lg rounded-[32px]">
+              <h3 className="font-black mb-4">Upload Guidelines</h3>
+              <div className="space-y-4 text-sm font-bold text-gray-500">
+                <p>• Only upload complete work.</p>
+                <p>• Avoid including node_modules or secret API keys.</p>
+                <p>• Provide a clear description and README for buyers.</p>
+                <p>• Ensure category and price match the value provided.</p>
               </div>
+            </Card>
+          </div>
 
-              <FieldGroup>
-                <FieldLabel>Price (₹) *</FieldLabel>
-                <Input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  placeholder="e.g., 299"
-                  min="1"
-                  step="1"
-                  required
-                />
-              </FieldGroup>
-            </div>
-
-            {/* Submit */}
-            <div className="flex gap-4 pt-8 border-t">
-              <Link href="/dashboard" className="flex-1">
-                <Button type="button" variant="outline" className="w-full">
-                  Cancel
-                </Button>
-              </Link>
-              <Button
-                type="submit"
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-                disabled={loading || uploading || !uploadedFile}
-              >
-                {loading ? 'Publishing...' : 'Publish Project'}
-              </Button>
-            </div>
-          </form>
-        </Card>
+        </div>
       </div>
     </div>
   );
