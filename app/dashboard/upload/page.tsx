@@ -388,7 +388,8 @@ export default function UploadProjectPage() {
             category: formData.category,
             tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
             title: formData.title,
-            description: formData.description
+            description: formData.description,
+            framework: formData.framework
           }
         : {
             title: formData.title,
