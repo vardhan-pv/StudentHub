@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || null;
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,10 +31,24 @@ export default function LoginPage() {
       });
       const data = await response.json();
       if (!response.ok) { setError(data.error || 'Login failed'); return; }
+
+      // Clear any stale tokens before setting fresh ones
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+
       localStorage.setItem('auth_token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
+
       const user = data.data.user;
-      if (user.role === 'seller' || user.role === 'both') { router.push('/dashboard'); } else { router.push('/marketplace'); }
+
+      // Redirect to callbackUrl if present, otherwise default by role
+      if (callbackUrl) {
+        router.push(callbackUrl);
+      } else if (user.role === 'seller' || user.role === 'both') {
+        router.push('/dashboard');
+      } else {
+        router.push('/marketplace');
+      }
     } catch (err) { setError('An error occurred. Please try again.'); } finally { setLoading(false); }
   };
 

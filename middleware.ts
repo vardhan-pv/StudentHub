@@ -9,6 +9,7 @@ export async function middleware(request: NextRequest) {
   const isPublicPath = 
     pathname === '/login' || 
     pathname === '/register' || 
+    pathname === '/pricing' ||
     pathname.startsWith('/api/auth');
 
   // 2. Define static/asset paths that should always be accessible
@@ -39,13 +40,12 @@ export async function middleware(request: NextRequest) {
   // If user is NOT logged in and trying to access a protected path
   if (!isValid && !isPublicPath) {
     const loginUrl = new URL('/login', request.url);
-    // Optional: store the attempted URL to redirect back after login
-    // loginUrl.searchParams.set('callbackUrl', encodeURIComponent(pathname));
+    loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   // If user IS logged in and trying to access login/register
-  if (isValid && isPublicPath) {
+  if (isValid && (pathname === '/login' || pathname === '/register')) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
